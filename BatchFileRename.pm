@@ -134,7 +134,7 @@ sub __process_src
         if (scalar(@parts) > 0)
         {
             #search and replace the keyword with the template key we want
-            $self->{src_template} =~ s/\(\{$keyword\}\)/\[\% $parts[0] \%\]/g;
+            $self->{src_template} =~ s/\{\{$keyword\}\}/\[\% $parts[0] \%\]/g;
 
             if (scalar(@parts) > 1)
             {
@@ -172,7 +172,7 @@ sub __process_dst
         #simply build up the proper destination Template string
         print $keyword . "\n";
 
-        $self->{dst_template} =~ s/\(\{$keyword\}\)/\[\% $keyword \%\]/g;
+        $self->{dst_template} =~ s/\{\{$keyword\}\}/\[\% $keyword \%\]/g;
     }
 }
 
@@ -192,11 +192,11 @@ sub __extract_keywords
     my @keywords = ();
     my $keyword = '';
 
-    while ($str =~ /\(\{(.*?)\}\)/g)
+    while ($str =~ /\{\{(.*?)\}\}/g)
     {
         $keyword = $&;
-        $keyword =~ s/^\(\{//;
-        $keyword =~ s/\}\)$//;
+        $keyword =~ s/^\{\{//;
+        $keyword =~ s/\}\}$//;
 
         push(@keywords, $keyword);
     }
