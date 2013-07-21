@@ -5,9 +5,8 @@ Batch rename files from one filename schema to another.
 
 Dependencies:
 
-    1) boolean
-    2) Template
-    3) Template::Extract
-    4) File::Slurp
-    5) Config::Simple
+    1) Template
+    2) Template::Extract
+    3) File::Slurp
+    4) Config::Simple
 

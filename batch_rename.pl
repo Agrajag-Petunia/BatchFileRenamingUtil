@@ -2,7 +2,6 @@
 
 use strict;
 use warnings;
-use boolean;
 use Getopt::Long;
 use Config::Simple;
 use FindBin;
@@ -53,11 +52,7 @@ sub config_shell
 
     print "\nDo yo actually want to rename the files?(y/n)\n> ";
     chomp( my $tmp = <STDIN> );
-
-    if ( $tmp =~/^y(?:es)?$/i )
-    {
-        $pretend = true;
-    }
+    $pretend = $tmp =~/^n(?:o)?$/i;
 
     return BatchFileRename->new( src     => $src,
                                  dst     => $dst,

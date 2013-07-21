@@ -2,7 +2,6 @@ package BatchFileRename;
 
 use strict;
 use warnings;
-use boolean;
 use Template;
 use Template::Extract;
 use File::Slurp;
@@ -13,69 +12,70 @@ use Data::Dumper;
 BatchFileRename - A class for renaming files based of template strings
 
 =head1 SYNOPSIS
-	use BatchFileRename;
-	my $rename = BatchFileRename->new(src => $self->{src}, dst => $self->{dst}, path => $self->{path});
-	$rename->refactor()  || die('Refactor failed: $!');
-	
+    use BatchFileRename;
+    my $rename = BatchFileRename->new(src => $self->{src}, dst => $self->{dst}, path => $self->{path});
+    $rename->refactor()  || die('Refactor failed: $!');
+    
 =head1 DESCRIPTION
 
 This is a module to group rename files in a directory,
 given a source and destination template
-	
+    
 =head2 Methods
 
 =head3 new
-	my $rename = BatchFileRename->new(
+    my $rename = BatchFileRename->new(
                     src => $self->{src},
                     dst => $self->{dst},
                     path => $self->{path},
                     pretend => $self->{pretend});
-	
-	Instantiates a BatchFileRename object given an initial format template, a desired format template
-	and the path to process in.
-	
+    
+    Instantiates a BatchFileRename object given an initial format template, a desired format template
+    and the path to process in.
+    
 =cut
 
 sub new
 {
-	my ($class, %args) = @_;
-	
-	my $self = bless({}, $class);
-	
-	#set up instance variables
+    my ($class, %args) = @_;
+    
+    my $self = bless({}, $class);
+    
+    #set up instance variables
     $self->{src} = $args{src};
     $self->{dst} = $args{dst};
     $self->{path} = $args{path};
     $self->{pretend} = $args{pretend};
     
     $self->__process_src();
-	$self->__process_dst();
-		
+    $self->__process_dst();
+        
     return $self
 }
 
 
 =head3 
 
-	$rename->batch_rename();
-	
-	This method runs the file rename on each file in the path
+    $rename->batch_rename();
+    
+    This method runs the file rename on each file in the path
 
 =cut
-		
+        
 sub batch_rename
 {
-	my $self = shift;
-	
+    my $self = shift;
+    
     my @files = read_dir($self->{path});
     foreach my $file (@files)
     {
         my $new_name = $self->__rename($file);
         print $new_name."\n";
 
-        if (! $self->{pretend} )
+        if ( !$self->{pretend} )
         {
-            rename($file, $new_name) || die ("Error renaming file");
+            rename($self->{path}.$file, $self->{path}.$new_name) ||
+            die ('Error renaming file: orig='.$file.' new='.$new_name);
         }
     }
 }
@@ -83,27 +83,27 @@ sub batch_rename
 
 =head3 
 
-	$self->__rename($filename);
-	
-	This method accepts the original filename and determines what it should be renamed to,
+    $self->__rename($filename);
+    
+    This method accepts the original filename and determines what it should be renamed to,
     which is returned as a string to batch_rename.
 
 =cut
 
 sub __rename
 {
-	my ($self, $filename) = @_;
-	my $extractor = Template::Extract->new;
-	my $injector = Template->new;
+    my ($self, $filename) = @_;
+    my $extractor = Template::Extract->new;
+    my $injector = Template->new;
     my %operations = %{ $self->{operations} };
-	my $output = $filename;
+    my $output = $filename;
 
-    #print 'Original filename: '.$filename."\n";	
+    #print 'Original filename: '.$filename."\n";    
     #print 'Source Template: '.$self->{src_template}."\n";
     #print 'Destination Template: '.$self->{dst_template}."\n";
 
-	#extract the values from the original string using the src template
-	my $values = $extractor->extract($self->{src_template}, $filename);
+    #extract the values from the original string using the src template
+    my $values = $extractor->extract($self->{src_template}, $filename);
     
     #use Data::Dumper;
     #print Dumper($values)."\n";
@@ -124,16 +124,16 @@ sub __rename
         $output = '';
         $injector->process(\$self->{dst_template}, \%vals, \$output);
     }
-    	
-	return $output;
+        
+    return $output;
 }
 
 
 =head3 
 
-	$self->__process_src();
-	
-	This method extracts the template keyword and any operations for them from the src string.
+    $self->__process_src();
+    
+    This method extracts the template keyword and any operations for them from the src string.
     These are stored in this BatchFileRename's src_template and operations variables. 
 
 =cut
@@ -179,9 +179,9 @@ sub __process_src
 
 =head3 
 
-	$self->__process_dst();
-	
-	This method simply converts the input syntax for dst into a template format.
+    $self->__process_dst();
+    
+    This method simply converts the input syntax for dst into a template format.
 
 =cut
 
@@ -205,9 +205,9 @@ sub __process_dst
 
 =head3 
 
-	$self->__extract_keywords($str);
-	
-	This method extracts the delimited keywords/sections from the string and returns and array of them.
+    $self->__extract_keywords($str);
+    
+    This method extracts the delimited keywords/sections from the string and returns and array of them.
 
 =cut
 
