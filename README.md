@@ -9,4 +9,5 @@ Dependencies:
     2) Template
     3) Template::Extract
     4) File::Slurp
+    5) Config::Simple
 

@@ -2,8 +2,14 @@
 
 use strict;
 use warnings;
+use boolean;
 use Getopt::Long;
+use Config::Simple;
+use FindBin;
+use lib "$FindBin::Bin/";
 use BatchFileRename;
+
+Getopt::Long::config('bundling');
 
 sub usage
 {
@@ -19,6 +25,7 @@ sub usage
     print "\tdst DESTINATION    => a destination schema\n";
     print "\tpath PATH          => the path to the folder of the file you want to rename\n";
     print "\tpretend            => set true if you just want to see what the files would be renamed to\n";
+    print "\tinteractive        => set true if you just want to be prompted for input (useful if you're going to have a lot of spaces you need to backslash)\n";
     print "\thelp               => display the help message\n";    
     print "\n";
     print "Example)\n";
@@ -31,33 +38,79 @@ sub usage
     exit(1);
 }
 
-# setup defaults
-my $src = "";
-my $dst = "";
-my $path = "";
-my $pretend;
+sub config_shell
+{
+    my ($src, $dst, $path, $pretend);
 
-my $result = GetOptions (   "src=s"     => \$src,
-                            "dst=s"     => \$dst,
-                            "path=s"    => \$path,
-                            "pretend"   => \$pretend,
-                            "help"      => sub{ usage(); }) || usage();
+    print "\nEnter the source template string:\n> ";
+    chomp( $src = <STDIN> );
+
+    print "\nEnter the destination template string:\n> ";
+    chomp( $dst = <STDIN> );
+
+    print "\nEnter the path to the files:\n> ";
+    chomp( $path = <STDIN> );
+
+    print "\nDo yo actually want to rename the files?(y/n)\n> ";
+    chomp( my $tmp = <STDIN> );
+
+    if ( $tmp =~/^y(?:es)?$/i )
+    {
+        $pretend = true;
+    }
+
+    return BatchFileRename->new( src     => $src,
+                                 dst     => $dst,
+                                 path    => $path,
+                                 pretend => $pretend);
+}
+
+sub config_read
+{
+    my $file = shift;
+    my %args = ();
+
+    Config::Simple->import_from($file, \%args) || die ("Couldn't load config");
+
+    return BatchFileRename->new( src     => $args{'default.src'},
+                                 dst     => $args{'default.dst'},
+                                 path    => $args{'default.path'},
+                                 pretend => $args{'default.pretend'});
+}
+
+my ($rename, $src, $dst, $path, $pretend, $interactive, $config, $help);
+GetOptions (   'src|s=s'        => \$src,
+               'dst|d=s'        => \$dst,
+               'path|p=s'       => \$path,
+               'pretend|n'      => \$pretend,
+               'interactive|i'  => \$interactive,
+               'config|c=s'     => \$config,
+               'help|h'         => sub{ usage(); }) || usage();
 
 
-print $src."\n";
-print $dst."\n";
-print $path."\n";
-#print $pretend."\n";
+if ( $interactive )
+{
+    $rename = config_shell();
+}
 
-my $rename = BatchFileRename->new(  src     => $src,
+elsif ( $config )
+{
+    $rename = config_read($config);
+}
+
+elsif ( $src && $dst && $path )
+{
+    $rename = BatchFileRename->new( src     => $src,
                                     dst     => $dst,
                                     path    => $path,
                                     pretend => $pretend);
+}
 
+else
+{
+    usage();
+}
 
-#my $rename = BatchFileRename->new(  src => '({EPISODE:x - 28}). ({NAME}).({EXTENSION})',
-#                                    dst => 'BATMAN The Animated Series Complete - s01e({EPISODE}) - ({NAME}).({EXTENSION})',
-#                                    path => '/path/to/files');
+$rename->batch_rename();
 
-exit(0)
-                                
+exit(0);   

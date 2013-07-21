@@ -6,6 +6,7 @@ use boolean;
 use Template;
 use Template::Extract;
 use File::Slurp;
+use Data::Dumper;
 
 =head1 NAME
 
@@ -14,7 +15,7 @@ BatchFileRename - A class for renaming files based of template strings
 =head1 SYNOPSIS
 	use BatchFileRename;
 	my $rename = BatchFileRename->new(src => $self->{src}, dst => $self->{dst}, path => $self->{path});
-	$rename->refactor()  || die("Refactor failed: $!");
+	$rename->refactor()  || die('Refactor failed: $!');
 	
 =head1 DESCRIPTION
 
@@ -74,7 +75,7 @@ sub batch_rename
 
         if (! $self->{pretend} )
         {
-            #rename the file
+            rename($file, $new_name) || die ("Error renaming file");
         }
     }
 }
@@ -94,14 +95,36 @@ sub __rename
 	my ($self, $filename) = @_;
 	my $extractor = Template::Extract->new;
 	my $injector = Template->new;
-	my $output = '';
-	
+    my %operations = %{ $self->{operations} };
+	my $output = $filename;
+
+    #print 'Original filename: '.$filename."\n";	
+    #print 'Source Template: '.$self->{src_template}."\n";
+    #print 'Destination Template: '.$self->{dst_template}."\n";
+
 	#extract the values from the original string using the src template
-	my $values = $extractor->extract($self->src, $filename);
-	
-	#inject the extracted values into dst
-	$injector->process(\$self->dst, $values, \$output);
-	
+	my $values = $extractor->extract($self->{src_template}, $filename);
+    
+    #use Data::Dumper;
+    #print Dumper($values)."\n";
+
+    if ( $values )
+    {
+        my %vals = %$values;
+
+        #apply any operations to the values
+        foreach my $key (keys %operations)
+        {
+            $operations{ $key } =~ s/KEY/$vals{ $key }/g;
+            #print $operations{ $key }."\n";
+            $vals{ $key } = eval( $operations{ $key } );
+        }
+
+        #inject the extracted values into dst
+        $output = '';
+        $injector->process(\$self->{dst_template}, \%vals, \$output);
+    }
+    	
 	return $output;
 }
 
@@ -127,27 +150,30 @@ sub __process_src
     {
         #build up the proper Template string and a hash where
         #template keywords map to operations
-        print $keyword . "\n";
+        #print $keyword . "\n";
         
         my @parts = split(':', $keyword);
+        #use Data::Dumper;
+        #print Dumper(\@parts)."\n";   
 
         if (scalar(@parts) > 0)
         {
             #search and replace the keyword with the template key we want
-            $self->{src_template} =~ s/\{\{$keyword\}\}/\[\% $parts[0] \%\]/g;
+            $self->{src_template} =~ s/\{\{\Q$keyword\E\}\}/\[\% \Q$parts[0]\E \%\]/g;
+            #print $parts[0]."\n";
 
             if (scalar(@parts) > 1)
             {
-                #remove the first element
-                shift @parts;
-
                 #joing the rest as our operation
-                $operations{ $keyword } = join('', @parts);
+                $operations{ $parts[0] } = join('', @parts[1 .. $#parts]);
             }
         }
     }
     
-    $self->{'operations'} = %operations;
+    $self->{'operations'} = \%operations;
+
+    #use Data::Dumper;
+    #print Dumper($self->{operations})."\n"; 
 }
 
 
@@ -170,9 +196,9 @@ sub __process_dst
     foreach my $keyword (@keywords)
     {
         #simply build up the proper destination Template string
-        print $keyword . "\n";
+        #print $keyword . "\n";
 
-        $self->{dst_template} =~ s/\{\{$keyword\}\}/\[\% $keyword \%\]/g;
+        $self->{dst_template} =~ s/\{\{\Q$keyword\E\}\}/\[\% \Q$keyword\E \%\]/g;
     }
 }
 
